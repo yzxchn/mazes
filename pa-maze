@@ -1,0 +1,272 @@
+#!/usr/bin/env ruby
+
+require "minitest/autorun"
+require "set"
+
+class Maze
+	def initialize(n, m)
+		@n = n
+		@m = m
+		@maze = create_default(@n, @m)
+	end
+
+		attr_reader :maze
+
+
+	def create_default(n, m)
+		# create a default maze, which is stored as an array of arrays. 1 represents wall,
+		# 0 represents empty.
+		default = Array.new(2*m + 1) {Array.new(2*n + 1){"1"}}
+		(0..2*m).each do |i|
+			if i % 2 == 1
+				(0..2*n).each do |j|
+					if j % 2 == 1
+						default[i][j] = "0"
+					end
+				end
+			end
+		end
+
+		return default
+	end
+
+	
+	def load(maze_string)
+		if !is_valid_maze_string(maze_string)
+			raise "String length doesn't match maze size"
+		else
+			ind = 0
+			(0..2*@m).each do |i|
+				(0..2*@n).each do |j|
+					@maze[i][j] = maze_string[ind]
+					ind += 1
+				end
+			end
+		end
+	end
+
+	def is_valid_maze_string(maze_string)
+		return maze_string.length == (2*@n + 1)*(2*@m + 1)
+	end
+
+  def display()
+    graph = ""
+    (0..2*@m).each do |i|
+      (0..2*@n).each do |j|
+        graph << get_symbol(i, j)
+      end
+      graph << "\n"
+    end
+
+    return graph
+  end
+
+  def get_symbol(ind_i, ind_j)
+    if ind_i % 2 == 0
+      if ind_j % 2 == 0
+        return "+"
+      else
+        if @maze[ind_i][ind_j] == "1"
+          return "-"
+        else
+          return " "
+        end
+      end
+    else
+      if @maze[ind_i][ind_j] == "1"
+        return "|"
+      else
+        return " "
+      end
+    end
+  end
+
+#	def display()
+#    # display the maze in the console
+#    @maze.each do |row|
+#			puts row.join('')
+#		end
+#	end
+
+	def solve(begX, begY, endX, endY)
+    # using the trace() method to determine if the maze is solvable or not
+    path = trace(begX, begY, endX, endY)
+    if !path.nil?
+      return true
+    else
+      return false
+    end
+	end
+
+  def trace(begX, begY, endX, endY)
+    # A bfs algorithm
+    to_visit = Array.new
+    visited = Set.new
+    # Storing the possible paths
+    path = [[begX, begY]]
+    to_visit.push(path)
+    while !to_visit.empty?
+      current_path = to_visit.shift
+      # if found the end point, then the current path is the solution
+      if current_path[-1][0] == endX && current_path[-1][1] == endY
+        return current_path
+      else
+        options = get_options(current_path[-1][0], current_path[-1][1])
+        options.each do |cell|
+          # Not going into visited cells to avoid loops.
+          if !visited.include? cell
+            new_path = current_path.dup
+            new_path.push(cell)
+            to_visit.push(new_path)
+          end
+        end
+      end
+      visited.add(current_path[-1])
+    end
+    # when there is no solution, return nil
+    return nil
+  end
+
+  def redesign
+    #reset maze to default
+    @maze = create_default(@n, @m)
+    startX = 0
+    startY = rand(@m)
+    make_maze(startX, startY, Set.new)
+  end
+
+  def make_maze(startX, startY, visited)
+    # generating maze using the recursive backtrack method
+    directions = ["up", "left", "down", "right"].shuffle
+    directions.each do |direction|
+      next_cell = walk(startX, startY, direction)
+      if is_valid_cell(next_cell[0], next_cell[1]) && !(visited.include? next_cell)
+        remove_wall(startX, startY, direction)
+        visited.add(next_cell)
+        make_maze(next_cell[0], next_cell[1], visited)
+      end
+    end
+  end
+
+
+
+	def get_options(x, y)
+    # get all possible ways to move to the next cell
+    options = Array.new
+    ["up", "right", "down", "left"].each do |direction|
+      if !check_is_wall(x, y, direction)
+        options.push(walk(x, y, direction))
+      end
+    end
+
+    return options
+	end
+
+	def to_index(coord)
+		return 2*coord + 1
+	end
+
+  def check_is_wall(x, y, direction)
+    # check if there is a wall in direction
+    if direction ==  "up"
+      return @maze[to_index(y) - 1][to_index(x)] == "1"
+    elsif direction == "right"
+      return @maze[to_index(y)][to_index(x) + 1] == "1"
+    elsif direction == "down"
+      return @maze[to_index(y) + 1][to_index(x)] == "1" 
+    elsif direction == "left"
+      return @maze[to_index(y)][to_index(x) - 1] == "1"
+    else
+      raise "Unrecognized direction parameter"
+    end
+  end
+
+  def walk(x, y, direction)
+    # get the coordinate of the cell on the direction
+    if direction == "up"
+      return [x, y - 1]
+    elsif direction == "right"
+      return [x + 1, y]
+    elsif direction == "down"
+      return [x, y + 1]
+    elsif direction == "left"
+      return [x - 1, y]
+    else
+      raise "Unrecognized direction parameter"
+    end
+  end
+
+  def is_valid_cell(x, y)
+    # if the cell falls within the maze
+    return (x >= 0 && x < @n) && (y >= 0 && y < @m)
+  end
+
+  def remove_wall(x, y, direction)
+    # remove the wall for cell (x, y) on the given direction
+    i = to_index(x)
+    j = to_index(y)
+    if direction == "up"
+      @maze[j - 1][i] = "0"
+    elsif direction == "right"
+      @maze[j][i + 1] = "0"
+    elsif direction == "down"
+      @maze[j + 1][i] = "0"
+    elsif direction == "left"
+      @maze[j][i - 1] = "0"
+    else
+      raise "Unrecognized direction"
+    end
+  end
+end
+
+test_maze = Maze.new(4, 4)
+test_maze.load("111111111100010001111010101100010101101110101100000101111011101100000101111111111")
+puts test_maze.display
+path = test_maze.trace(0,0,3,3)
+test_maze.redesign
+puts test_maze.display
+class TestMaze < MiniTest::Unit::TestCase
+	def setup
+		@test_maze = Maze.new(4,5)
+		@test_maze2 = Maze.new(4,4)
+    @test_maze2.load("111111111100010001111010101100010101101110101100000101111011101100000101111111111")
+	end
+
+	def test_maze_size
+		assert_equal 11, @test_maze.maze.length
+		assert_equal 9, @test_maze.maze[0].length
+		assert_equal 9, @test_maze.maze[7].length
+	end
+
+	def test_maze_cells
+		assert_equal "0", @test_maze.maze[1][3]
+		assert_equal "0", @test_maze.maze[7][7]
+		assert_equal "1", @test_maze.maze[2][6]
+	end
+
+
+	#def test_display
+	#	@test_maze.display
+	#end
+
+	def test_load
+    assert_equal "0", @test_maze2.maze[6][7]
+	end
+
+  def test_solve
+    assert_equal true, @test_maze2.solve(0, 0, 3, 3)
+    assert_equal false, @test_maze.solve(0, 0, 0, 3)
+  end
+
+  def test_path
+    assert_equal "1,0", @test_maze2.trace(0,0,3,3)[1].join(",")
+    assert_equal "1,2", @test_maze2.trace(0,0,3,3)[5].join(",")
+    assert_equal "3,0", @test_maze2.trace(0,0,3,3)[9].join(",")
+    assert_equal "3,2", @test_maze2.trace(0,0,3,3)[11].join(",")
+  end
+
+  def test_redesign
+    @test_maze.redesign
+    puts @test_maze.display
+  end
+end
