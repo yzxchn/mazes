@@ -219,12 +219,7 @@ class Maze
   end
 end
 
-test_maze = Maze.new(4, 4)
-test_maze.load("111111111100010001111010101100010101101110101100000101111011101100000101111111111")
-puts test_maze.display
-path = test_maze.trace(0,0,3,3)
-test_maze.redesign
-puts test_maze.display
+
 class TestMaze < MiniTest::Unit::TestCase
 	def setup
 		@test_maze = Maze.new(4,5)
