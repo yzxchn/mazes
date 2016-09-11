@@ -1,0 +1,1 @@
+<a href="https://codeclimate.com/github/yzxchn/mazes"><img src="https://codeclimate.com/github/yzxchn/mazes/badges/gpa.svg" /></a>
